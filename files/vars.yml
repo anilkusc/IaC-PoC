@@ -9,7 +9,6 @@ server_2_ip: 192.168.1.104
 server_2_hostname: server-anil-kuscu-3
 ssh_password: <my-pass>
 cluster_name: case-anil-kuscu.abc
-smtp_host: smtp.gmail.com:25
+smtp_host: smtp.gmail.com
 smtp_from: anilkuscu95@gmail.com
 recipient: anilkuscu95@gmail.com
-© 2021 GitHub, Inc.
