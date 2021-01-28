@@ -1,0 +1,26 @@
+
+- hosts: server-0
+  vars:
+  vars_files:
+    - ./vars.yml  
+  tasks:
+  - name: edit ip addresses for fluentbit config
+    command: sed -i "s/<server-2-ip>/"{{server_2_ip}}"/g" /root/master/files/fluentbit.yaml    
+  - name: "label worker"
+    command: kubectl label node "{{worker_hostname}}" space=metrics
+  - name: "taint node"
+    command: kubectl taint nodes "{{worker_hostname}}" space=metrics":"NoSchedule
+  - name: "apply prometheus"
+    command: kubectl apply -f /root/master/files/prometheus.yaml
+  - name: "apply grafana"
+    command: kubectl apply -f /root/master/files/grafana.yml
+  - name: "apply grafana"
+    command: kubectl apply -f /root/master/files/fluentbit.yaml
+- hosts: server-2
+  tasks:
+  - name: copy kubeconfig files to server 2
+    command: mkdir /root/.kube
+  - name: copy kubeconfig
+    copy: src=/root/.kube/config dest=/root/.kube/config    
+  - name: download kubectl binary
+    get_url: url=https://storage.googleapis.com/kubernetes-release/release/v1.20.2/bin/linux/amd64/kubectl dest=/usr/local/bin/kubectl mode=0777

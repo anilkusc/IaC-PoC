@@ -1,0 +1,17 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: '<smtp-host>'
+  smtp_from: '<smtp-from>'
+  smtp_require_tls: false
+  smtp_hello: 'alert'
+route:
+  group_by: ['instance', 'alert']
+  group_wait: 30s
+  group_interval: 1m
+  repeat_interval: 15m
+  receiver: team-1
+receivers:
+  - name: 'team-1'
+    email_configs:
+      - to: '<recipient>'
+        send_resolved: true

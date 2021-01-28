@@ -1,0 +1,15 @@
+before_script:
+  - echo "Starting"
+after_script:
+  - echo "OK"
+  
+deploy1:
+  stage: deploy
+  script:
+    - sudo docker build -t anilkuscu95/sample:$CI_PIPELINE_ID .
+    - sudo docker tag anilkuscu95/sample:$CI_PIPELINE_ID anilkuscu95/sample:latest
+    - sudo docker login --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD
+    - sudo docker push anilkuscu95/sample:$CI_PIPELINE_ID
+    - sudo docker push anilkuscu95/sample:latest
+    - sudo sed -i "s/latest/$CI_PIPELINE_ID/g" ./deploy.yaml
+    - kubectl apply -f deploy.yaml

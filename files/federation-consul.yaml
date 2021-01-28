@@ -1,0 +1,90 @@
+---
+- hosts: server-0
+  vars:
+  vars_files:
+    - ./vars.yml
+  tasks:
+  - name: edit ip addresses for alertmanager
+    command: sed -i "s/<smtp-host>/{{smtp_host}}/g" /root/master/files/alertmanager.yml
+  - name: edit ip addresses for alertmanager 2
+    command: sed -i "s/<smtp-from>/{{smtp_from}}/g" /root/master/files/alertmanager.yml
+  - name: edit ip addresses for alertmanager 2
+    command: sed -i "s/<recipient>/{{recipient}}/g" /root/master/files/alertmanager.yml
+  - name: edit ip addresses for prometheus config
+    command: sed -i "s/<server-2>/{{server_1_ip}}/g" /root/master/files/prometheus-master.yml
+  - name: edit ip addresses for prometheus config 2
+    command: sed -i "s/<server-1>/{{worker_ip}}/g" /root/master/files/prometheus-master.yml
+  - name: edit ip addresses for prometheus config 3
+    command: sed -i "s/<master-ip>/{{master_ip}}/g" /root/master/files/prometheus.yaml 
+  - name: edit ip addresses for prometheus config 4
+    command: sed -i "s/<worker-ip>/{{worker_ip}}/g" /root/master/files/prometheus.yaml
+- hosts: server-2
+  vars:
+  vars_files:
+    - ./vars.yml
+  tasks:
+  - name: "Installing Docker dependent packages"
+    yum:
+      name: "{{item}}"
+      state: latest
+    with_items:
+    - yum-utils
+    - device-mapper-persistent-data
+    - lvm2
+  - name: "Configuring docker-ce repo"
+    get_url:
+      url: https://download.docker.com/linux/centos/docker-ce.repo
+      dest: /etc/yum.repos.d/docker-ce.repo
+      mode: 0644
+  - name: " Installing Docker latest version"
+    yum:
+      name: docker-ce
+      state: present
+  - name: " Starting and Enabling Docker service"
+    service:
+      name: docker
+      state: started
+      enabled: yes
+  - name: Run Docker for Consul
+    command: docker run -dit -p 8500:8500 -p 8600:8600/udp consul agent -server -ui -node="{{server_2_hostname}}" -bootstrap-expect=1 -client=0.0.0.0
+  - name: Create Prometheus Volume Folder
+    command: mkdir -p /volumes/prometheus/
+  - name: Create Alertmanager Volume Folder
+    command: mkdir -p /volumes/alertmanager/
+  - name: Copy prometheus master config
+    copy: src=/root/master/files/prometheus-master.yml dest=/volumes/prometheus/prometheus.yml
+  - name: Copy alertmanager config
+    copy: src=/root/master/files/alertmanager.yml dest=/volumes/alertmanager/alertmanager.yml
+  - name: Run Docker for Prometheus-Master
+    command: "docker run -dit -p 9090:9090 -v /volumes/prometheus/:/etc/prometheus prom/prometheus"
+  - name: Run Docker for Alertmanager
+    command: "docker run -dit -p 9093:9093 -v /volumes/alertmanager:/etc/alertmanager/ prom/alertmanager:v0.19.0"
+  - name: Register Prometheus to consul
+    uri:
+      url: http://{{server_1_ip}}:8500/v1/agent/service/register
+      method: PUT
+      body: "{\"Address\":\"{{worker_ip}}\",\"ID\":\"prometheus_1\",\"Name\":\"prometheus\",\"Port\":30909,\"Tags\":[\"_app=prometheus\"]}"
+      body_format: json
+      headers:
+        Content-Type: "application/json"     
+    register: result
+    until: result.status == 200
+    retries: 60
+    delay: 3
+  - name: get runner script
+    become: yes
+    shell: curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh | sudo bash
+  - name: install gitlab-runner
+    become: yes
+    yum:
+      name: gitlab-runner
+      state: latest
+  - name:  Add gitlab-runner to sudoers
+    command: sed -i "1i\ gitlab-runner ALL=(ALL) NOPASSWD":" ALL" /etc/sudoers
+#  - name: Copy .kube to gitlab runner
+#    copy: src=/root/.kube dest=/home/gitlab-runner/.kube directory_mode=yes
+# /etc/gitlab/gitlab.rb -> external_url "http://<server-3-ip>/" & gitlab-ctl reconfigure
+# Settings -> CI/CD -> runner -> expand -> url&token      
+# gitlab-runner register --url $CI_SERVER_URL -r $REGISTRATION_TOKEN --executor shell --name myrunner -n      
+# gitlab-runner register --url http://<server-3-ip>/ -r bHcQ6V-YjFaezsPwvXxv --executor shell --name myrunner -n 
+# 

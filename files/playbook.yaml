@@ -1,0 +1,27 @@
+
+- hosts: server-0
+  vars:
+  vars_files:
+    - ./vars.yml  
+  tasks:
+  - name: "add/change ingress configuration"
+    command: sed -i "s/ingress_nginx_enabled":" false/ingress_nginx_enabled":" true/g" /root/master/kubespray/inventory/sample/group_vars/k8s-cluster/addons.yml
+  - name: "set ingress hostnetwork true"
+    command: sed -i "s/# ingress_nginx_host_network":" false/ingress_nginx_host_network":" true/g" /root/master/kubespray/inventory/sample/group_vars/k8s-cluster/addons.yml
+  - name: "change cluster name"
+    command: sed -i "s/cluster_name":" cluster.local/cluster_name":" "{{cluster_name}}"/g"  /root/master/kubespray/inventory/sample/group_vars/k8s-cluster/k8s-cluster.yml
+  - name: "changed network plugin"
+    command: sed -i "s/kube_network_plugin":" calico/kube_network_plugin":" flannel/g"  /root/master/kubespray/inventory/sample/group_vars/k8s-cluster/k8s-cluster.yml
+  - name: "changed master host"
+    command: sed -i "6i\ "{{master_hostname}}" ansible_host="{{master_ip}}"" /root/master/kubespray/inventory/sample/inventory.ini
+  - name: "changed worker host"
+    command: sed -i "6i\ "{{worker_hostname}}" ansible_host="{{worker_ip}}"" /root/master/kubespray/inventory/sample/inventory.ini
+  - name: "added master to inventory 1"
+    command: sed -i "18i\ "{{master_hostname}}"" /root/master/kubespray/inventory/sample/inventory.ini
+  - name: "added master to inventory 2"
+    command: sed -i "25i\ "{{master_hostname}}"" /root/master/kubespray/inventory/sample/inventory.ini
+  - name: "added master to inventory 3"
+    command: sed -i "30i\ "{{master_hostname}}"" /root/master/kubespray/inventory/sample/inventory.ini
+  - name: "changed worker host 1"
+    command: sed -i "30i\ "{{worker_hostname}}"" /root/master/kubespray/inventory/sample/inventory.ini
+   

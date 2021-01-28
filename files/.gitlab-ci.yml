@@ -1,0 +1,12 @@
+before_script:
+  - echo "Starring"
+after_script:
+  - echo "OK"
+
+deploy1:
+  stage: deploy
+  script:
+    - sudo cp -fr $CI_PROJECT_DIR/alertmanager.yml /volumes/alertmanager/
+    - sudo cp -fr $CI_PROJECT_DIR/prometheus.yml /volumes/prometheus/
+    - sudo docker run -dit -p 9993:9993 -v /volumes/alertmanager:/etc/alertmanager/ prom/alertmanager:v0.19.0
+    - sudo docker run -dit -p 9990:9990 -v /volumes/prometheus/:/etc/prometheus/ prom/prometheus

@@ -1,0 +1,42 @@
+---
+- hosts: all
+  tasks:
+  - name: "disable selinux1"
+    command: setenforce 0
+  - name: "disable selinux2"
+    command: sed -i "s/^SELINUX\=enforcing/SELINUX\=disabled/g" /etc/selinux/config
+  - name: "disable selinux3"
+    command: sed -i "s/^SELINUX\=permissive/SELINUX\=disabled/g" /etc/selinux/config
+  - name: "disable selinux4"
+    command:  systemctl disable firewalld
+  - name: "disable selinux5"
+    command:  systemctl stop firewalld
+  - name: "disable selinux6"
+    command:  systemctl mask firewalld
+- hosts: server-0
+  vars:
+  vars_files:
+    - ./vars.yml
+  tasks:    
+  - name: master directory
+    file:
+      path: /root/master/files
+      state: directory
+  - name: copy files
+    copy: src=../files/ dest=/root/master/files/ directory_mode=yes         
+  - name: "create keys"
+    command: ssh-keygen -t rsa -N "" -f /root/master/id_rsa
+  - name: "distribute keys"
+    command: sshpass -p "{{ ssh_password }}" ssh-copy-id -i /root/master/id_rsa "{{ item }}" -o StrictHostKeyChecking=no
+    with_items:
+    - "{{master_ip}}"
+    - "{{worker_ip}}"
+    - "{{server_1_ip}}"
+    - "{{server_2_ip}}"
+  - name: "Clone kubespray"
+    git:  repo=https://github.com/kubernetes-incubator/kubespray.git
+          dest=/root/master/kubespray
+          accept_hostkey=yes
+          force=yes
+  - name: "pip install requirements"
+    command: pip3 install -r /root/master/kubespray/requirements.txt

@@ -1,0 +1,41 @@
+- hosts: server-3
+  vars:
+  vars_files:
+    - ./vars.yml
+  tasks:
+  - name: "Installing Docker dependent packages"
+    yum:
+      name: "{{item}}"
+      state: latest
+    with_items:
+    - yum-utils
+    - device-mapper-persistent-data
+    - lvm2
+  - name: "Configuring docker-ce repo"
+    get_url:
+      url: https://download.docker.com/linux/centos/docker-ce.repo
+      dest: /etc/yum.repos.d/docker-ce.repo
+      mode: 0644
+  - name: " Installing Docker latest version"
+    yum:
+      name: docker-ce
+      state: present
+  - name: " Starting and Enabling Docker service"
+    service:
+      name: docker
+      state: started
+      enabled: yes  
+  - name: Create ElasticSearch Volume Folder
+    command: mkdir -p /volumes/elasticsearch/      
+  - name: Copy elasticsearch config
+    copy: src=/root/master/files/elasticsearch.yml dest=/volumes/elasticsearch/elasticsearch.yml
+  - name: Run Docker for elasticsearch
+    command: docker run -dit -p 9200:9200 -p 9300:9300 -e LS_JAVA_OPTS="-Xmx256m -Xms256m" -v /volumes/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+  - name: Run Docker for kibana
+    command: docker run -dit -p 5601:5601 -e ELASTICSEARCH_HOSTS="http://{{server_2_ip}}:9200" docker.elastic.co/kibana/kibana:7.2.0
+#Kibana screen index pattern -> * && @timestamp    
+  - name: Run Docker for gitlab
+    command: docker run -dit -e GITLAB_OMNIBUS_CONFIG="external_url 'http://"{{server_2_ip}}"/'" -p 443:443 -p 80:80 -p 2222:22 gitlab/gitlab-ce
+#Create new repo and add alertmanager.yaml,promethes-master.yaml(change name to prometheus.yaml), .gitlab-cli.yaml .
+#  
+        

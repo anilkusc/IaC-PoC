@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nslimiter
+  namespace: default
+  labels:
+    name: nslimiter
+spec:
+  ports:
+  - name: webhook
+    port: 443
+    targetPort: 443
+  selector:
+    name: nslimiter
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nslimiter
+  namespace: default
+  labels:
+    name: nslimiter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: nslimiter
+  template:
+    metadata:
+      labels:
+        name: nslimiter
+    spec:
+      containers:
+        - name: webhook
+          image: anilkuscu95/nslimiter
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 443          
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /app/certs
+              readOnly: true
+            - name: namespaces
+              mountPath: /app/config/namespaces.json
+              subPath: namespaces.json
+      volumes:
+        - name: webhook-certs
+          hostPath:
+            path: /mutate/certs
+        - name: namespaces
+          configMap:
+            name: validnamespaces           
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: validnamespaces
+  labels:
+    app: nslimiter
+data:
+  namespaces.json: |-
+    [
+        {
+                "metadata": {
+                    "name": "default",
+                    "label": "default"
+                }
+            }
+    ]
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: nslimiter
+webhooks:
+  - name: nslimiter.github.com
+    clientConfig:
+      service:
+        name: nslimiter
+        namespace: default
+        path: "/validatens"
+      caBundle: <CA-BUNDLE>
+    rules:
+      - operations: ["CREATE",]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods","deployments"]
+    failurePolicy: Ignore
