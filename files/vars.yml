@@ -7,7 +7,7 @@ server_1_ip: 192.168.1.103
 server_1_hostname: server-anil-kuscu-2 
 server_2_ip: 192.168.1.104
 server_2_hostname: server-anil-kuscu-3
-ssh_password: Adebayor_01
+ssh_password: <myp-ass>
 cluster_name: case-anil-kuscu.abc
 smtp_host: smtp.gmail.com:25
 smtp_from: anilkuscu95@gmail.com
